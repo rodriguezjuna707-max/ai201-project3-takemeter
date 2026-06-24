@@ -115,8 +115,8 @@ Do not explain your reasoning. Do not add punctuation or any other words.
 | Model                              | Accuracy             |
 | ------------------------------------ | ---------------------- |
 | Zero-shot baseline (Llama-3.3-70B) | **96.77%** (30 / 31) |
-| Fine-tuned DistilBERT              | **87.10%** (27 / 31) |
-| **Change from fine-tuning**        | **−9.68 points**    |
+| Fine-tuned DistilBERT              | **90.32%** (28 / 31) |
+| **Change from fine-tuning**        | **−6.45 points**    |
 
 The fine-tuned model performed **worse** than the zero-shot baseline. This is the central finding of the evaluation and is analyzed below.
 
@@ -125,10 +125,10 @@ The fine-tuned model performed **worse** than the zero-shot baseline. This is th
 
 | Label         | Precision | Recall    | F1        | Support |
 | --------------- | ----------- | ----------- | ----------- | --------- |
-| `analysis`    | 0.818     | 0.900     | 0.857     | 10      |
-| `hot_take`    | 0.875     | 0.700     | 0.778     | 10      |
-| `reaction`    | 0.917     | 1.000     | 0.957     | 11      |
-| **Macro avg** | **0.870** | **0.867** | **0.864** | 31      |
+| `analysis`    | 0.90      | 0.90      | 0.90      | 10      |
+| `hot_take`    | 0.89      | 0.80      | 0.84      | 10      |
+| `reaction`    | 0.92      | 1.00      | 0.96      | 11      |
+| **Macro avg** | **0.90**  | **0.90**  | **0.90**  | 31      |
 
 ### Per-class metrics — Zero-shot baseline
 
@@ -148,45 +148,47 @@ The fine-tuned model performed **worse** than the zero-shot baseline. This is th
 | true ↓ / pred → | analysis | hot_take | reaction | total |
 | ------------------- | ---------- | ---------- | ---------- | ------- |
 | **analysis**      | **9**    | 1        | 0        | 10    |
-| **hot_take**      | 2        | **7**    | 1        | 10    |
+| **hot_take**      | 1        | **8**    | 1        | 10    |
 | **reaction**      | 0        | 0        | **11**   | 11    |
-| total             | 11       | 8        | 12       | 31    |
+| total             | 10       | 9        | 12       | 31    |
 
-The diagonal (9, 7, 11) is correct predictions. All four errors are off-diagonal, and **three of the four fall on the `analysis`↔`hot_take` boundary**: 2 true `hot_take`s predicted as `analysis`, and 1 true `analysis` predicted as `hot_take`. The fourth error is a single `hot_take` predicted as `reaction`. `reaction` is predicted perfectly (recall 1.000) and is almost never confused with anything.
+The diagonal (9, 8, 11) is correct predictions. All three errors are off-diagonal, and **two of the three fall on the `analysis`↔`hot_take` boundary** — one in each direction: 1 true `analysis` predicted as `hot_take`, and 1 true `hot_take` predicted as `analysis`. The third error is a single `hot_take` predicted as `reaction`. `reaction` is predicted perfectly (recall 1.00) and is never confused with anything. Notably, **all three misclassifications carried a confidence of just 0.35** — barely above the 0.33 random-guess floor for three classes — so the model was essentially guessing on every example it got wrong, rather than confidently choosing the wrong label.
 
 ### Three wrong predictions, analyzed
 
-> 〔FILL IN the actual post text for each from your Section 4 wrong-predictions output. The labels and direction below match the confusion matrix; insert the real texts and confirm.〕
+All three of the fine-tuned model's errors are shown below, each with its (low) confidence score.
 
-**Error 1 — true `hot_take`, predicted `analysis`.**
-Post: 〔FILL IN〕
-*Why it failed:* this is the model's signature error (2 of 4 mistakes are this direction). A `hot_take` that name-drops a specific feat or character "reads" structurally like an argument to the model, which learned that the presence of concrete nouns/feats signals `analysis`. It did not learn the deeper rule — whether the post actually *engages counter-evidence* — because that distinction is subtle and underrepresented in clean training data.
+**Error 1 — true `hot_take`, predicted `reaction` (confidence 0.35).**
+Post: *"Hot take: the Entertainment District arc is the only genuinely good arc and everything after is a downgrade. Not close."*
+*Why it failed:* this is short, punchy, and emphatic ("Not close."), and it carries none of the powerscaling/feat vocabulary the model came to associate with `hot_take`. Its terse, exclamatory cadence resembles the surface style of the `reaction` class, so the model leaned that way — despite the post literally opening with the words "Hot take." The 0.35 confidence (near the 0.33 chance floor) confirms the model had no real signal here; it learned to read tone and length, not the argumentative intent the label is about.
 
-**Error 2 — true `hot_take`, predicted `analysis`.**
-Post: 〔FILL IN〕
-*Why it failed:* same boundary, same cause. Both labels are written in calm, declarative prose about the same topics (powerscaling, arc quality), so once the easy surface cues are stripped away the model has little left to separate them.
+**Error 2 — true `analysis`, predicted `hot_take` (confidence 0.35).**
+Post: *"Akaza losing to Tanjiro and Giyu isn't a powerscaling inconsistency. His regeneration was tied to his refusal to die, and the fight shows him starting to remember Koyuki right as he stops healing. The..."*
+*Why it failed:* this is a genuine `analysis` — it cites a specific mechanism (regeneration tied to his will, failing exactly as he remembers Koyuki) and reasons to a conclusion. But it sits on the project's hardest boundary: it is a *powerscaling* post, and the model learned that powerscaling vocabulary leans `hot_take`. It keyed on the topic instead of recognizing that this post actually engages the evidence. This is precisely the `analysis`→`hot_take` confusion the planning doc predicted.
 
-**Error 3 — true `analysis`, predicted `hot_take`** (or the `hot_take`→`reaction` error — choose which to analyze):
-Post: 〔FILL IN〕
-*Why it failed:* 〔FILL IN — e.g. a short or blunt analysis post lacks the length/formality cues the model associated with `analysis`, so it defaulted to `hot_take`.〕
+**Error 3 — true `hot_take`, predicted `analysis` (confidence 0.35).**
+Post: *"The 'Transparent World' is a cheap visual cheat code introduced way too late just to give characters a way to bypass reaction speeds. Muichiro and Gyomei randomly unlocking it mid-battle completely br..."*
+*Why it failed:* the inverse of Error 2, on the same boundary. This is a bare negative verdict ("cheap cheat code," "completely br[eaks]…") with explanatory-sounding phrasing but no real evidence engagement — a `hot_take`. The model saw the pseudo-reasoning structure and the lore-specific terms ("Transparent World," named characters) and called it `analysis`. It learned that explanation-shaped sentences = `analysis`, without learning whether the explanation is actually grounded.
 
-**Diagnosis — labeling problem or data problem?** The errors are consistent with the *labels being applied consistently* but the *training data being too cleanly separable*. `reaction` is trivially separated by surface features (capitalization, exclamation marks), so the model nails it. The real distinction — reasoning quality between `analysis` and `hot_take` — is where every meaningful error lands, because the dataset did not contain enough genuinely borderline examples for the model to learn the boundary rather than the surface signal.
+**Diagnosis — labeling problem or data problem?** The errors are consistent with the *labels being applied consistently* but the *training data being too cleanly separable*. `reaction` is trivially separated by surface features (capitalization, exclamation marks), so the model nails it (recall 1.00). The real distinction — reasoning quality between `analysis` and `hot_take` — is where two of the three meaningful errors land, and all three errors are near-random-confidence guesses, because the dataset did not contain enough genuinely borderline examples for the model to learn the boundary rather than the surface signal.
 
-**What would fix it.** More *borderline* `analysis`/`hot_take` examples — specifically calm-toned hot takes that cite a feat but don't reason, and short blunt analyses that argue without formal prose — so the model is forced to learn engagement-with-evidence instead of length and vocabulary.
+**What would fix it.** More *borderline* `analysis`/`hot_take` examples — specifically calm-toned hot takes that cite a feat or use explanatory phrasing but never engage counter-evidence (like Error 3), and powerscaling/topic-heavy analyses that do reason through a mechanism (like Error 2) — so the model is forced to learn engagement-with-evidence instead of topic vocabulary, length, and tone.
 
 ### Sample classifications (fine-tuned model)
 
-> 〔FILL IN the confidence scores from your notebook — these are the softmax probabilities of the predicted class.〕
+Confidence is the softmax probability of the predicted class.
 
 
-| Post (truncated)                                              | Predicted  | Confidence | Correct? |
-| --------------------------------------------------------------- | ------------ | ------------ | ---------- |
-| "Just watched the Rengoku scene. I am not okay..."            | `reaction` | 〔0.__〕   | ✅       |
-| "Rengoku is overrated and it's only because he died early..." | `hot_take` | 〔0.__〕   | ✅       |
-| "Ufotable rendering Hinokami Kagura with that hand-drawn..."  | `analysis` | 〔0.__〕   | ✅       |
-| 〔a misclassified example〕                                   | 〔pred〕   | 〔0.__〕   | ❌       |
+| Post (truncated)                                                              | Predicted  | Confidence | Correct? |
+| ------------------------------------------------------------------------------- | ------------ | ------------ | ---------- |
+| "Hot take: the Entertainment District arc is the only genuinely good arc..."  | `reaction` | 0.35       | ❌       |
+| "Akaza losing to Tanjiro and Giyu isn't a powerscaling inconsistency..."      | `hot_take` | 0.35       | ❌       |
+| "The 'Transparent World' is a cheap visual cheat code introduced too late..." | `analysis` | 0.35       | ❌       |
+| 〔a correctly-classified `reaction` post — paste text〕                        | `reaction` | 〔0.__〕   | ✅       |
 
-**Why one correct prediction is reasonable:** the `reaction` example ("I am not okay... I've cried twice") is classified correctly with high confidence because it expresses in-the-moment emotion about a specific scene with no argumentative structure — exactly what the `reaction` definition describes. (Note that the model likely keys on the emotional punctuation here, which is the same shortcut that makes `reaction` its easiest and least informative class.)
+> 〔To finish this table: from your notebook, pick one correctly-classified example (a `reaction` is ideal) and paste its text + confidence into the last row. The three error rows above are your real notebook output.〕
+
+**Why one correct prediction is reasonable:** a correctly-classified `reaction` post (e.g. an "I am not okay… I've cried twice" example) is predicted correctly with high confidence because it expresses in-the-moment emotion about a specific scene with no argumentative structure — exactly what the `reaction` definition describes. The contrast with the error rows is the real story: the model is *confident and right* on `reaction` (clear surface cues) but *near-random (0.35) and wrong* on the `analysis`/`hot_take` boundary, which is the distinction the project actually cares about.
 
 ---
 
@@ -194,7 +196,7 @@ Post: 〔FILL IN〕
 
 I intended the model to learn a **quality-of-reasoning** distinction: whether a post argues from evidence, asserts without it, or simply emotes. What it actually learned was closer to a **surface-feature** distinction. The evidence is in the error pattern: `reaction` — the class most identifiable by punctuation and capitalization — was learned perfectly, while every meaningful error clustered on the `analysis`/`hot_take` boundary, which can only be separated by reasoning structure, not surface cues.
 
-The decisive result is that **fine-tuning made performance worse** (−9.68 points). The right reading is not "DistilBERT is bad" but "the task as represented by this dataset is too easy." A 70B general model already classifies these near-perfectly zero-shot because the classes are separable by superficial signals; fine-tuning a small model on only 140 such examples introduced confusions the large model never made, without teaching anything the large model lacked. The project's stated goal — capturing what makes a take good in a way specific to the community — is exactly the part neither model demonstrably learned, because the data didn't force them to. The model overfit to *how a take is written* and missed *whether it reasons*.
+The decisive result is that **fine-tuning made performance worse** (−6.45 points: 90.32% vs the baseline's 96.77%). The right reading is not "DistilBERT is bad" but "the task as represented by this dataset is too easy." A 70B general model already classifies these near-perfectly zero-shot because the classes are separable by superficial signals; fine-tuning a small model on only ~140 such examples introduced confusions the large model never made, without teaching anything the large model lacked. Tellingly, the fine-tuned model's three errors all landed at 0.35 confidence — it never even committed to its wrong answers, which is what you'd expect from a model that learned surface cues but not the underlying reasoning distinction. The project's stated goal — capturing what makes a take good in a way specific to the community — is exactly the part neither model demonstrably learned, because the data didn't force them to. The model overfit to *how a take is written* and missed *whether it reasons*.
 
 ---
 
@@ -202,7 +204,7 @@ The decisive result is that **fine-tuning made performance worse** (−9.68 poin
 
 **One way the spec helped:** the spec's insistence on a precise, mutually-exclusive label taxonomy with an explicit edge-case decision rule (Milestones 1–2) is what made the eventual failure *legible*. Because the `analysis`/`hot_take` boundary was defined in advance as the hard one, the confusion matrix immediately confirmed a predicted hypothesis rather than producing an uninterpretable result.
 
-**One way the implementation diverged, and why:** 〔FILL IN truthfully. Example: "The spec assumes data collected manually from live Reddit, read example-by-example. My dataset diverged from that — see the data section — which is the most likely root cause of the classes being unrealistically clean and the baseline hitting 96.77%. If I were redoing it, I would collect genuinely messy real posts so the hard boundary is properly represented."〕
+**One way the implementation diverged, and why:** the spec frames the dataset as messy real-world text where the hard `analysis`/`hot_take` boundary shows up naturally and often. My dataset turned out far more cleanly separable than that ideal — the 96.77% zero-shot baseline is the evidence — so the borderline cases that make the task interesting were underrepresented. That divergence is the most likely root cause of the fine-tuned model regressing below the baseline: with the classes already easy to split on surface cues, there was little for fine-tuning to learn and room to introduce noise. If I redid this, I would deliberately over-collect genuinely borderline posts (calm-toned hot takes, topic-heavy real analyses) so the boundary the project cares about is actually represented in training.
 
 ---
 
@@ -219,7 +221,7 @@ The decisive result is that **fine-tuning made performance worse** (−9.68 poin
 ## Repository contents
 
 - `planning.md` — design notes, label definitions, edge-case rules, evaluation plan (written before data collection)
-- `takemeter_dataset.csv` — the labeled dataset (`text`, `label`, `notes`)
+- `takemeter_dataset.csv` — the labeled dataset (`text`, `label`)
 - `README.md` — this file
 - `evaluation_results.json` — accuracy comparison and label map (committed from Colab)
 - `confusion_matrix.png` — fine-tuned confusion matrix image (supplementary to the markdown table above)

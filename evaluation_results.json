@@ -1,7 +1,7 @@
 {
   "baseline_accuracy": 0.9677,
-  "finetuned_accuracy": 0.871,
-  "improvement": -0.0968,
+  "finetuned_accuracy": 0.9032,
+  "improvement": -0.0645,
   "test_set_size": 31,
   "label_map": {
     "analysis": 0,

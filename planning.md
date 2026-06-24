@@ -75,7 +75,7 @@ When a post gives me genuine pause, I apply the relevant rule above, record the 
 
 **If a label is underrepresented after 200.** The brief flags >70% in one label as an imbalance problem; my own target is at least ~20% per class. `analysis` is the likeliest to come up short, since it's rarer in casual threads. If so, I'll do a targeted second pass into the thread types above (longer top-level posts, animation/ending discussion) and collect more of the thin class specifically — rather than down-sampling the others and losing total volume.
 
-**File format.** One complete labeled CSV (not pre-split) with columns `text`, `label`, and `notes`. The notebook handles the 70/15/15 train/validation/test split automatically.
+**File format.** One complete labeled CSV (not pre-split) with columns `text` and `label`; difficult-case notes are kept in this planning doc and the README rather than a separate CSV column. The notebook handles the 70/15/15 train/validation/test split automatically.
 
 ---
 
